@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SkySenseAI - Pro Weather App</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
+
+<!-- FontAwesome -->
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  crossorigin="anonymous"
+/>
+
+<style>
+  /* Reset */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  body {
+    font-family: 'Montserrat', sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    transition: background 1s ease;
+  }
+  .app-container {
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 25px;
+    width: 400px;
+    max-width: 100%;
+    padding: 2rem 2.5rem;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    text-align: center;
+    position: relative;
+    transition: background 1s ease;
+  }
+  h1 {
+    font-weight: 700;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: 1.5px;
+    user-select: none;
+  }
+  form {
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+  }
+  input[type="text"] {
+    flex-grow: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 15px;
+    border: none;
+    font-size: 1rem;
+    outline: none;
+    box-shadow: inset 0 0 6px rgba(255,255,255,0.2);
+    color: #000;
+  }
+  input[type="text"]::placeholder {
+    color: #999;
+  }
+  button {
+    padding: 0 1.5rem;
+    border-radius: 15px;
+    border: none;
+    background: #005bb5;
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  button:hover {
+    background: #003d7a;
+  }
+  .error {
+    color: #ff5252;
+    margin-bottom: 1rem;
+    min-height: 1.5rem;
+    user-select: none;
+  }
+  /* Loader spinner */
+  .loader {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid #005bb5;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    margin: 2rem auto;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Weather Display */
+  .weather-main {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+  }
+  .weather-icon {
+    font-size: 6rem;
+    margin-bottom: 0.25rem;
+    transition: color 0.5s ease;
+  }
+  .temperature {
+    font-size: 4.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    letter-spacing: 2px;
+  }
+  .weather-desc {
+    font-size: 1.25rem;
+    font-style: italic;
+    margin-bottom: 1rem;
+  }
+  .location {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    opacity: 0.8;
+  }
+  /* Extra details grid */
+  .extra-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem 2rem;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+  .detail {
+    background: rgba(255,255,255,0.15);
+    border-radius: 15px;
+    padding: 1rem;
+    user-select: none;
+  }
+  .detail-label {
+    opacity: 0.8;
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+  }
+  .detail-value {
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  /* Background images for weather conditions */
+  body.clear {
+    background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+  }
+  body.cloudy {
+    background: linear-gradient(135deg, #d7d2cc 0%, #304352 100%);
+  }
+  body.rain {
+    background: linear-gradient(135deg, #667db6 0%, #0082c8 50%, #0082c8 100%);
+  }
+  body.storm {
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  }
+  body.snow {
+    background: linear-gradient(135deg, #83a4d4 0%, #b6fbff 100%);
+  }
+  body.fog {
+    background: linear-gradient(135deg, #3e5151 0%, #decba4 100%);
+  }
+
+  /* Responsive */
+  @media (max-width: 450px) {
+    .app-container {
+      width: 100%;
+      padding: 1.5rem;
+    }
+    .weather-icon {
+      font-size: 4.5rem;
+    }
+    .temperature {
+      font-size: 3.5rem;
+    }
+  }
+</style>
+</head>
+<body class="clear">
+  <div class="app-container" role="main" aria-live="polite">
+    <h1>SkySenseAI</h1>
+    <form id="weather-form" autocomplete="off" aria-label="Search Weather by City">
+      <input
+        type="text"
+        id="city-input"
+        placeholder="Enter city name"
+        aria-required="true"
+        aria-label="City name input"
+      />
+      <button type="submit" aria-label="Get Weather">Get</button>
+    </form>
+    <div class="error" id="error"></div>
+    <div class="loader" id="loader" style="display:none;"></div>
+
+    <div class="weather-main" id="weather-main">
+      <i class="weather-icon fas fa-sun" id="weather-icon" aria-hidden="true"></i>
+      <div class="temperature" id="temperature">-- °C</div>
+      <div class="weather-desc" id="weather-desc">Clear sky</div>
+      <div class="location" id="location">City, Country</div>
+
+      <div class="extra-details">
+        <div class="detail">
+          <div class="detail-label">Feels Like</div>
+          <div class="detail-value" id="feelslike">-- °C</div>
+        </div>
+        <div class="detail">
+          <div class="detail-label">Humidity</div>
+          <div class="detail-value" id="humidity">-- %</div>
+        </div>
+        <div class="detail">
+          <div class="detail-label">Wind Speed</div>
+          <div class="detail-value" id="windspeed">-- km/h</div>
+        </div>
+        <div class="detail">
+          <div class="detail-label">Wind Direction</div>
+          <div class="detail-value" id="winddir">-- °</div>
+        </div>
+        <div class="detail">
+          <div class="detail-label">Pressure</div>
+          <div class="detail-value" id="pressure">-- hPa</div>
+        </div>
+        <div class="detail">
+          <div class="detail-label">Sunrise</div>
+          <div class="detail-value" id="sunrise">--</div>
+        </div>
+        <div class="detail">
+          <div class="detail-label">Sunset</div>
+          <div class="detail-value" id="sunset">--</div>
+        </div>
+        <div class="detail">
+          <div class="detail-label">Local Time</div>
+          <div class="detail-value" id="local-time">--</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const form = document.getElementById('weather-form');
+  const cityInput = document.getElementById('city-input');
+  const errorDiv = document.getElementById('error');
+  const loader = document.getElementById('loader');
+  const weatherMain = document.getElementById('weather-main');
+
+  const weatherIcon = document.getElementById('weather-icon');
+  const temperature = document.getElementById('temperature');
+  const weatherDesc = document.getElementById('weather-desc');
+  const locationEl = document.getElementById('location');
+  const feelsLikeEl = document.getElementById('feelslike');
+  const humidityEl = document.getElementById('humidity');
+  const windspeedEl = document.getElementById('windspeed');
+  const winddirEl = document.getElementById('winddir');
+  const pressureEl = document.getElementById('pressure');
+  const sunriseEl = document.getElementById('sunrise');
+  const sunsetEl = document.getElementById('sunset');
+  const localTimeEl = document.getElementById('local-time');
+
+  const weatherMap = {
+    0:  { icon: "fas fa-sun", desc: "Clear sky", bodyClass: "clear" },
+    1:  { icon: "fas fa-cloud-sun", desc: "Mainly clear", bodyClass: "clear" },
+    2:  { icon: "fas fa-cloud-sun", desc: "Partly cloudy", bodyClass: "cloudy" },
+    3:  { icon: "fas fa-cloud", desc: "Overcast", bodyClass: "cloudy" },
+    45: { icon: "fas fa-smog", desc: "Fog", bodyClass: "fog" },
+    48: { icon: "fas fa-smog", desc: "Depositing rime fog", bodyClass: "fog" },
+    51: { icon: "fas fa-cloud-rain", desc: "Light drizzle", bodyClass: "rain" },
+    53: { icon: "fas fa-cloud-rain", desc: "Moderate drizzle", bodyClass: "rain" },
+    55: { icon: "fas fa-cloud-showers-heavy", desc: "Dense drizzle", bodyClass: "rain" },
+    56: { icon: "fas fa-cloud-meatball", desc: "Light freezing drizzle", bodyClass: "snow" },
+    57: { icon: "fas fa-cloud-meatball", desc: "Dense freezing drizzle", bodyClass: "snow" },
+    61: { icon: "fas fa-cloud-showers-heavy", desc: "Slight rain", bodyClass: "rain" },
+    63: { icon: "fas fa-cloud-showers-heavy", desc: "Moderate rain", bodyClass: "rain" },
+    65: { icon: "fas fa-cloud-showers-heavy", desc: "Heavy rain", bodyClass: "rain" },
+    66: { icon: "fas fa-cloud-meatball", desc: "Light freezing rain", bodyClass: "snow" },
+    67: { icon: "fas fa-cloud-meatball", desc: "Heavy freezing rain", bodyClass: "snow" },
+    71: { icon: "fas fa-snowflake", desc: "Slight snow fall", bodyClass: "snow" },
+    73: { icon: "fas fa-snowflake", desc: "Moderate snow fall", bodyClass: "snow" },
+    75: { icon: "fas fa-snowflake", desc: "Heavy snow fall", bodyClass: "snow" },
+    77: { icon: "fas fa-snowflake", desc: "Snow grains", bodyClass: "snow" },
+    80: { icon: "fas fa-cloud-showers-heavy", desc: "Slight rain showers", bodyClass: "rain" },
+    81: { icon: "fas fa-cloud-showers-heavy", desc: "Moderate rain showers", bodyClass: "rain" },
+    82: { icon: "fas fa-cloud-showers-heavy", desc: "Violent rain showers", bodyClass: "rain" },
+    85: { icon: "fas fa-snowflake", desc: "Slight snow showers", bodyClass: "snow" },
+    86: { icon: "fas fa-snowflake", desc: "Heavy snow showers", bodyClass: "snow" },
+    95: { icon: "fas fa-bolt", desc: "Thunderstorm", bodyClass: "storm" },
+    96: { icon: "fas fa-bolt", desc: "Thunderstorm with slight hail", bodyClass: "storm" },
+    99: { icon: "fas fa-bolt", desc: "Thunderstorm with heavy hail", bodyClass: "storm" },
+  };
+
+  // Helper: format time HH:MM AM/PM
+  function formatTime(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString(undefined, {hour: '2-digit', minute: '2-digit'});
+  }
+
+  async function fetchSunTimes(lat, lon, date) {
+    const url = `https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lon}&date=${date}&formatted=0`;
+    try {
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if(data.status === "OK"){
+        return {
+          sunrise: formatTime(data.results.sunrise),
+          sunset: formatTime(data.results.sunset),
+        };
+      }
+    } catch {
+      // fallback
+    }
+    return {sunrise: "--", sunset: "--"};
+  }
+
+  async function fetchWeather(city) {
+    errorDiv.textContent = "";
+    loader.style.display = "block";
+    weatherMain.style.display = "none";
+
+    try {
+      const res = await fetch(`/weather?city=${encodeURIComponent(city)}`);
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Failed to fetch weather data.");
+      }
+      const data = await res.json();
+
+      const codeInfo = weatherMap[data.weathercode] || {
+        icon: "fas fa-question-circle",
+        desc: "Unknown weather",
+        bodyClass: "clear"
+      };
+
+      document.body.className = codeInfo.bodyClass;
+      weatherIcon.className = `weather-icon ${codeInfo.icon}`;
+      temperature.textContent = `${data.temperature} °C`;
+      weatherDesc.textContent = codeInfo.desc;
+      locationEl.textContent = data.city;
+      windspeedEl.textContent = `${data.windspeed} km/h`;
+      localTimeEl.textContent = new Date(data.time).toLocaleString();
+
+      // Placeholder since Open-Meteo current_weather doesn't provide these
+      feelsLikeEl.textContent = `${data.temperature} °C`;
+      winddirEl.textContent = data.winddirection ? `${data.winddirection} °` : "--";
+      humidityEl.textContent = "-- %";
+      pressureEl.textContent = "-- hPa";
+
+      // Fetch sunrise and sunset times
+      const today = new Date().toISOString().split("T")[0];
+      const sunTimes = await fetchSunTimes(data.latitude, data.longitude, today);
+      sunriseEl.textContent = sunTimes.sunrise;
+      sunsetEl.textContent = sunTimes.sunset;
+
+      loader.style.display = "none";
+      weatherMain.style.display = "flex";
+
+    } catch (err) {
+      loader.style.display = "none";
+      errorDiv.textContent = err.message;
+      weatherMain.style.display = "none";
+      document.body.className = "clear";
+    }
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const city = cityInput.value.trim();
+    if(city) fetchWeather(city);
+  });
+
+  // Load NYC weather on start
+  window.addEventListener('load', () => {
+    cityInput.value = "New York";
+    fetchWeather("New York");
+  });
+</script>
+</body>
+</html>
